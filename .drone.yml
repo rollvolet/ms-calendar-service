@@ -1,0 +1,108 @@
+---
+kind: pipeline
+type: docker
+name: build-dry-run
+steps:
+- name: build-dry-run
+  image: plugins/docker
+  settings:
+    repo: ${DRONE_REPO_NAMESPACE}/${DRONE_REPO_NAME}
+    dry_run: true
+    purge: true
+trigger:
+  event:
+    - pull_request
+
+---
+kind: pipeline
+type: docker
+name: push-development-build
+steps:
+- name: push-development-build
+  image: plugins/docker
+  settings:
+    repo: ${DRONE_REPO_NAMESPACE}/${DRONE_REPO_NAME}
+    tags: ${DRONE_BRANCH}
+    username:
+      from_secret: docker_username
+    password:
+      from_secret: docker_password
+    purge: true
+trigger:
+  branch:
+    - development
+  event:
+    exclude:
+      - pull_request
+---
+kind: pipeline
+type: docker
+name: push-latest-build
+steps:
+- name: push-latest-build
+  image: plugins/docker
+  settings:
+    repo: ${DRONE_REPO_NAMESPACE}/${DRONE_REPO_NAME}
+    username:
+      from_secret: docker_username
+    password:
+      from_secret: docker_password
+    purge: true
+trigger:
+  branch:
+    - master
+  event:
+    exclude:
+      - pull_request
+---
+kind: pipeline
+type: docker
+name: push-feature-build
+steps:
+- name: push-feature-build
+  image: plugins/docker
+  settings:
+    repo: ${DRONE_REPO_NAMESPACE}/${DRONE_REPO_NAME}
+    tags: ${DRONE_BRANCH/\//-}
+    username:
+      from_secret: docker_username
+    password:
+      from_secret: docker_password
+    purge: true
+trigger:
+  branch:
+    - feature/*
+  event:
+    exclude:
+      - pull_request
+---
+kind: pipeline
+type: docker
+name: release
+steps:
+- name: push-tagged-build
+  image: plugins/docker
+  settings:
+    repo: ${DRONE_REPO_NAMESPACE}/${DRONE_REPO_NAME}
+    tags: ${DRONE_TAG##v}
+    username:
+      from_secret: docker_username
+    password:
+      from_secret: docker_password
+    purge: true
+trigger:
+  event:
+    - tag
+---
+kind: secret
+name: docker_username
+data: +3/OEQQhvb42M3NkQLasp8o3aK9jTD5TbO7wgbyewBL7YMPzKclj6qZBdnQ=
+---
+kind: secret
+name: docker_password
+data: a2GmIasYHsMw/gsrpLWow55DFykrHzmfEPrnjatnMt7CimAEJtblmdy0pZ7d6ReBUsm1uPAKfp84FZrp4wRdKg==
+---
+kind: signature
+hmac: 71e2f08ee944857eb342222f28160d0c5c03334419c9f1b3932d2d48a3d7b1ce
+
+...
