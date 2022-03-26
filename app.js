@@ -17,7 +17,8 @@ app.post('/calendar-events/', async function(req, res, next) {
     const calendarUri = await calendarManager.determineCalendar(payload);
     const msCalendarId = calendarManager.getMsCalendarId(calendarUri);
     const msEvent = await graphApi.createCalendarEvent(msCalendarId, payload);
-    const attributes = await insertCalendarEvent(calendarUri, payload, msEvent.id);
+    payload['ms-identifier'] = msEvent.id;
+    const attributes = await insertCalendarEvent(calendarUri, payload);
     const eventId = attributes.id;
     delete attributes.id;
     return res.status(201).send({
@@ -49,6 +50,9 @@ app.patch('/calendar-events/:id', async function(req, res, next) {
       payload.uri = event.uri;
       const msCalendarId = calendarManager.getMsCalendarId(event.calendar);
       const msEvent = await graphApi.updateCalendarEvent(msCalendarId, payload);
+      // ms-identifier might have changed if a new event is created via the Graph API
+      // e.g. if the previous event has been manually deleted in the agenda
+      payload['ms-identifier'] = msEvent.id;
       const attributes = await updateCalendarEvent(payload);
       delete attributes.id;
       return res.status(200).send({

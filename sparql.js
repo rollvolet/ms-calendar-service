@@ -3,13 +3,12 @@ import { query, update, uuid,
 
 const BASE_URI = 'http://data.rollvolet.be';
 
-async function insertCalendarEvent(calendarUri, payload, msIdentifier) {
+async function insertCalendarEvent(calendarUri, payload) {
   const eventId = uuid();
   const eventUri = `${BASE_URI}/calendar-events/${eventId}`;
   const event = Object.assign({}, payload, {
     id: eventId,
-    uri: eventUri,
-    'ms-identifier': msIdentifier
+    uri: eventUri
   });
   await _insertCalendarEvent(event);
   await update(`

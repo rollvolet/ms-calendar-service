@@ -69,8 +69,18 @@ export default class GraphApiClient {
     console.log(`Updating calendar event with id ${event['ms-identifier']} in MS calendar ${calendarId}`);
     const msEvent = toMsEvent(event);
     const path = `/users/${calendarId}/calendar/events/${event['ms-identifier']}`;
-    const response = await this.client.api(path).update(msEvent);
-    return response;
+    try {
+      const response = await this.client.api(path).update(msEvent);
+      return response;
+    } catch (e) {
+      if (e && e.statusCode == 404) {
+        console.log(`Event with id ${event['ms-identifier']} not found in MS calendar ${calendarId}. Going to create a new calendar event.`);
+        const newEvent = await this.createCalendarEvent(calendarId, event);
+        return newEvent;
+      } else {
+        throw e;
+      }
+    }
   }
 
   async deleteCalendarEvent(calendarId, msId) {
