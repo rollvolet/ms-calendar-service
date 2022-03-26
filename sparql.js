@@ -3,11 +3,32 @@ import { query, update, uuid,
 
 const BASE_URI = 'http://data.rollvolet.be';
 
-async function insertCalendarEvent(calendarUri, event, msEvent) {
+async function insertCalendarEvent(calendarUri, payload, msIdentifier) {
   const eventId = uuid();
   const eventUri = `${BASE_URI}/calendar-events/${eventId}`;
-  // TODO Fix dct:subject triple once request/intervention/order are resources in triplestore
+  const event = Object.assign({}, payload, {
+    id: eventId,
+    uri: eventUri,
+    'ms-identifier': msIdentifier
+  });
+  await _insertCalendarEvent(event);
+  await update(`
+    PREFIX ncal: <http://www.semanticdesktop.org/ontologies/2007/04/02/ncal#>
+    INSERT DATA {
+      ${sparqlEscapeUri(calendarUri)} ncal:component ${sparqlEscapeUri(eventUri)} .
+    }
+  `);
 
+  return event;
+}
+
+async function updateCalendarEvent(event) {
+  await update(`DELETE WHERE { ${sparqlEscapeUri(event.uri)} ?p ?o . }`);
+  await _insertCalendarEvent(event);
+  return event;
+}
+
+async function _insertCalendarEvent(event) {
   const optionalProperties = [];
   if (event.description) {
     optionalProperties.push(` ncal:description ${sparqlEscapeString(event.description)} ;`);
@@ -16,16 +37,16 @@ async function insertCalendarEvent(calendarUri, event, msEvent) {
     optionalProperties.push(` ncal:location ${sparqlEscapeString(event.location)} ;`);
   }
 
+  // TODO Fix dct:subject triple once request/intervention/order are resources in triplestore
   await update(`
     PREFIX mu: <http://mu.semte.ch/vocabularies/core/>
     PREFIX ncal: <http://www.semanticdesktop.org/ontologies/2007/04/02/ncal#>
     PREFIX dct: <http://purl.org/dc/terms/>
 
     INSERT DATA {
-      ${sparqlEscapeUri(calendarUri)} ncal:component ${sparqlEscapeUri(eventUri)} .
-      ${sparqlEscapeUri(eventUri)} a ncal:Event ;
-        mu:uuid ${sparqlEscapeString(eventId)} ;
-        ncal:uid ${sparqlEscapeString(msEvent.id)} ;
+      ${sparqlEscapeUri(event.uri)} a ncal:Event ;
+        mu:uuid ${sparqlEscapeString(event.id)} ;
+        ncal:uid ${sparqlEscapeString(event['ms-identifier'])} ;
         ncal:date ${sparqlEscapeDate(event.date)} ;
         ncal:summary ${sparqlEscapeString(event.subject)} ;
         ncal:url ${sparqlEscapeUri(event.url)} ;
@@ -34,12 +55,6 @@ async function insertCalendarEvent(calendarUri, event, msEvent) {
         dct:subject ${sparqlEscapeUri(event.request)} .
     }
   `);
-
-  return Object.assign({}, event, {
-    id: eventId,
-    uri: eventUri,
-    'ms-identifier': msEvent.id
-  });
 }
 
 async function getCalendarEvent(eventId) {
@@ -57,12 +72,12 @@ async function getCalendarEvent(eventId) {
     } LIMIT 1
   `);
 
-  if (result.results.length) {
-    const b = result.results[0];
+  if (result.results.bindings.length) {
+    const b = result.results.bindings[0];
     return {
       id: eventId,
       uri: b['event'].value,
-      msId: b['identifier'].value,
+      'ms-identifier': b['identifier'].value,
       calendar: b['calendar'].value
     };
   } else {
@@ -70,26 +85,41 @@ async function getCalendarEvent(eventId) {
   }
 }
 
-async function deleteCalendarEvent(eventId) {
+async function deleteCalendarEvent(eventUri) {
+  // Force cache clearing in mu-cl-resources by deleting only one property
+  // without removing the rdf:type or mu:uuid first.
+  // That way mu-cl-resources generates correct clear keys for mu-cache.
+  // TODO this query can be removed once the cache clearing issue is fixed in mu-cl-resources
+  await update(`
+    PREFIX ncal: <http://www.semanticdesktop.org/ontologies/2007/04/02/ncal#>
+
+    DELETE {
+      ${sparqlEscapeUri(eventUri)} ncal:uid ?identifier .
+    } WHERE {
+      ${sparqlEscapeUri(eventUri)} a ncal:Event ;
+          ncal:uid ?identifier .
+    }
+  `);
+
   await update(`
     PREFIX mu: <http://mu.semte.ch/vocabularies/core/>
     PREFIX ncal: <http://www.semanticdesktop.org/ontologies/2007/04/02/ncal#>
     PREFIX dct: <http://purl.org/dc/terms/>
 
     DELETE {
-      ?event ?p ?o .
-      ?calendar ncal:component ?event .
+      ${sparqlEscapeUri(eventUri)} ?p ?o .
+      ?calendar ncal:component ${sparqlEscapeUri(eventUri)} .
     } WHERE {
-      ?event a ncal:Event ;
-        mu:uuid ${sparqlEscapeString(eventId)} ;
+      ${sparqlEscapeUri(eventUri)} a ncal:Event ;
         ?p ?o .
-      ?calendar ncal:component ?event .
+      ?calendar ncal:component ${sparqlEscapeUri(eventUri)} .
     }
   `);
 }
 
 export {
   insertCalendarEvent,
+  updateCalendarEvent,
   getCalendarEvent,
   deleteCalendarEvent
 }
