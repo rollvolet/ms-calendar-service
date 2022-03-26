@@ -62,10 +62,11 @@ async function getCalendarEvent(eventId) {
     PREFIX ncal: <http://www.semanticdesktop.org/ontologies/2007/04/02/ncal#>
     PREFIX dct: <http://purl.org/dc/terms/>
 
-    SELECT ?event ?identifier ?calendar
+    SELECT ?event ?date ?identifier ?calendar
     WHERE {
       ?event a ncal:Event ;
         mu:uuid ${sparqlEscapeString(eventId)} ;
+        ncal:date ?date ;
         ncal:uid ?identifier .
       ?calendar ncal:component ?event .
     } LIMIT 1
@@ -76,6 +77,7 @@ async function getCalendarEvent(eventId) {
     return {
       id: eventId,
       uri: b['event'].value,
+      date: b['date'].value,
       'ms-identifier': b['identifier'].value,
       calendar: b['calendar'].value
     };

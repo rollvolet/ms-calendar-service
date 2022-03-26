@@ -19,7 +19,7 @@ function toMsDate(date, hours, minutes = 0, seconds = 0) {
   };
 }
 
-function toMsEvent(event) {
+function toMsEvent(event, requiresReschedule = true) {
   let htmlBody = '';
   if (event.description) {
     htmlBody += `<p>${event.description}</p>`;
@@ -27,19 +27,24 @@ function toMsEvent(event) {
   if (event.url) {
     htmlBody += `<p>RKB: <a href=${event.url}>${event.url}</a></p>`;
   }
-  return {
+  const msEvent = {
     subject: event.subject,
     body: {
       contentType: 'html',
       content: htmlBody
     },
-    start: toMsDate(event.date, CUSTOMER_VISIT_START_HOUR),
-    end: toMsDate(event.date, CUSTOMER_VISIT_START_HOUR + 1),
     location: {
       displayName: event.location
     },
     isReminderOn: false
   };
+
+  if (requiresReschedule) {
+    msEvent.start = toMsDate(event.date, CUSTOMER_VISIT_START_HOUR);
+    msEvent.end = toMsDate(event.date, CUSTOMER_VISIT_START_HOUR + 1);
+  }
+
+  return msEvent;
 }
 
 /**
@@ -65,9 +70,9 @@ export default class GraphApiClient {
     return response;
   }
 
-  async updateCalendarEvent(calendarId, event) {
+  async updateCalendarEvent(calendarId, event, requiresReschedule) {
     console.log(`Updating calendar event with id ${event['ms-identifier']} in MS calendar ${calendarId}`);
-    const msEvent = toMsEvent(event);
+    const msEvent = toMsEvent(event, requiresReschedule);
     const path = `/users/${calendarId}/calendar/events/${event['ms-identifier']}`;
     try {
       const response = await this.client.api(path).update(msEvent);

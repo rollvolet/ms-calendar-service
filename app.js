@@ -49,7 +49,8 @@ app.patch('/calendar-events/:id', async function(req, res, next) {
       payload.id = eventId;
       payload.uri = event.uri;
       const msCalendarId = calendarManager.getMsCalendarId(event.calendar);
-      const msEvent = await graphApi.updateCalendarEvent(msCalendarId, payload);
+      const requiresReschedule = payload.date != event.date;
+      const msEvent = await graphApi.updateCalendarEvent(msCalendarId, payload, requiresReschedule);
       // ms-identifier might have changed if a new event is created via the Graph API
       // e.g. if the previous event has been manually deleted in the agenda
       payload['ms-identifier'] = msEvent.id;
