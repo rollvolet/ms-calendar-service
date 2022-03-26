@@ -37,7 +37,8 @@ function toMsEvent(event) {
     end: toMsDate(event.date, CUSTOMER_VISIT_START_HOUR + 1),
     location: {
       displayName: event.location
-    }
+    },
+    isReminderOn: false
   };
 }
 
