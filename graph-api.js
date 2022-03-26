@@ -20,11 +20,18 @@ function toMsDate(date, hours, minutes = 0, seconds = 0) {
 }
 
 function toMsEvent(event) {
+  let htmlBody = '';
+  if (event.description) {
+    htmlBody += `<p>${event.description}</p>`;
+  }
+  if (event.url) {
+    htmlBody += `<p>RKB: <a href=${event.url}>${event.url}</a></p>`;
+  }
   return {
     subject: event.subject,
     body: {
-      contentType: 'text',
-      content: `${event.description || ''}\n\nRKB: ${event.url}`.trim()
+      contentType: 'html',
+      content: htmlBody
     },
     start: toMsDate(event.date, CUSTOMER_VISIT_START_HOUR),
     end: toMsDate(event.date, CUSTOMER_VISIT_START_HOUR + 1),
