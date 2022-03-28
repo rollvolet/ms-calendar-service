@@ -34,6 +34,39 @@ app.post('/calendar-events/', async function(req, res, next) {
   }
 });
 
+app.get('/calendar-events/:id/ms-event', async function(req, res, next) {
+  const sessionUri = getSessionIdHeader(req);
+  if (!sessionUri)
+    return next(new Error('Session header is missing'));
+
+  try {
+    const eventId = req.params.id;
+    const event = await getCalendarEvent(eventId);
+
+    if (event) {
+      const graphApi = new GraphApiClient(sessionUri);
+      const msCalendarId = calendarManager.getMsCalendarId(event.calendar);
+      const existsInCalendar = await graphApi.getCalendarEvent(msCalendarId, event);
+      if (existsInCalendar) {
+        return res.status(200).send({
+          data: {
+            id: event['ms-identifier'],
+            type: 'ms-events'
+          }
+        });
+      } else {
+        return res.status(200).send({ data: null });
+      }
+    } else {
+      console.log(`No calendar-event found with id ${eventId} in triplestore`);
+      return res.status(404).send();
+    }
+  } catch(e) {
+    console.trace(e);
+    return next(new Error(e.message));
+  }
+});
+
 app.patch('/calendar-events/:id', async function(req, res, next) {
   const sessionUri = getSessionIdHeader(req);
   if (!sessionUri)

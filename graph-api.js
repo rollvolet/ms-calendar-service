@@ -70,6 +70,22 @@ export default class GraphApiClient {
     return response;
   }
 
+  async getCalendarEvent(calendarId, event) {
+    console.log(`Fetching calendar event with id ${event['ms-identifier']} in MS calendar ${calendarId}`);
+    const path = `/users/${calendarId}/calendar/events/${event['ms-identifier']}`;
+    try {
+      const response = await this.client.api(path).get();
+      return response.id;
+    } catch (e) {
+      if (e && e.statusCode == 404) {
+        console.log(`Event with id ${event['ms-identifier']} not found in MS calendar ${calendarId}.`);
+        return null;
+      } else {
+        throw e;
+      }
+    }
+  }
+
   async updateCalendarEvent(calendarId, event, requiresReschedule) {
     console.log(`Updating calendar event with id ${event['ms-identifier']} in MS calendar ${calendarId}`);
     const msEvent = toMsEvent(event, requiresReschedule);
