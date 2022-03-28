@@ -40,8 +40,17 @@ function toMsEvent(event, requiresReschedule = true) {
   };
 
   if (requiresReschedule) {
-    msEvent.start = toMsDate(event.date, CUSTOMER_VISIT_START_HOUR);
-    msEvent.end = toMsDate(event.date, CUSTOMER_VISIT_START_HOUR + 1);
+    // TODO Type must be determined based on SPARQL query
+    let hour;
+    const subject = event.request || event.intervention || event.order;
+    if (subject.startsWith('http://data.rollvolet.be/requests/')) {
+      hour = CUSTOMER_VISIT_START_HOUR;
+    } else {
+      hour = PLANNING_START_HOUR;
+    }
+
+    msEvent.start = toMsDate(event.date, hour);
+    msEvent.end = toMsDate(event.date, hour + 1);
   }
 
   return msEvent;
