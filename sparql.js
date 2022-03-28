@@ -37,6 +37,8 @@ async function _insertCalendarEvent(event) {
   }
 
   // TODO Fix dct:subject triple once request/intervention/order are resources in triplestore
+  const linkedResource = event.request || event.intervention || event.order;
+
   await update(`
     PREFIX mu: <http://mu.semte.ch/vocabularies/core/>
     PREFIX ncal: <http://www.semanticdesktop.org/ontologies/2007/04/02/ncal#>
@@ -51,7 +53,7 @@ async function _insertCalendarEvent(event) {
         ncal:url ${sparqlEscapeUri(event.url)} ;
         ${optionalProperties.join('\n')}
         dct:source 'RKB' ;
-        dct:subject ${sparqlEscapeUri(event.request)} .
+        dct:subject ${sparqlEscapeUri(linkedResource)} .
     }
   `);
 }

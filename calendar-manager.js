@@ -32,7 +32,7 @@ export default class CalendarManager {
     // request/intervention/order are available as resources in triplestore.
     // Currently request, intervention and order attribute all contain the same URI value.
     // We're going to make a distinction based on the base URI.
-    const subject = event.request;
+    const subject = event.request || event.intervention || event.order;
     if (subject.startsWith('http://data.rollvolet.be/requests/')) {
       return CUSTOMER_VISIT_CALENDAR;
     } else {
