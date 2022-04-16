@@ -84,7 +84,11 @@ export default class GraphApiClient {
     const path = `/users/${calendarId}/calendar/events/${event['ms-identifier']}`;
     try {
       const response = await this.client.api(path).get();
-      return response.id;
+      const date = response.start.dateTime.substr(0, "YYYY-MM-DD".length);
+      return {
+        'ms-identifier': response.id,
+        date: date
+      };
     } catch (e) {
       if (e && e.statusCode == 404) {
         console.log(`Event with id ${event['ms-identifier']} not found in MS calendar ${calendarId}.`);

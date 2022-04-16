@@ -46,14 +46,26 @@ app.get('/calendar-events/:id/ms-event', async function(req, res, next) {
     if (event) {
       const graphApi = new GraphApiClient(sessionUri);
       const msCalendarId = calendarManager.getMsCalendarId(event.calendar);
-      const existsInCalendar = await graphApi.getCalendarEvent(msCalendarId, event);
-      if (existsInCalendar) {
-        return res.status(200).send({
-          data: {
-            id: event['ms-identifier'],
-            type: 'ms-events'
-          }
-        });
+      const msEvent = await graphApi.getCalendarEvent(msCalendarId, event);
+      if (msEvent) {
+        if (event.date != msEvent.date) { // both in format YYYY-MM-DD
+          return res.status(409).send({
+            data: {
+              id: event['ms-identifier'],
+              type: 'ms-events',
+              attributes: {
+                date: msEvent.date
+              }
+            }
+          });
+        } else {
+          return res.status(200).send({
+            data: {
+              id: event['ms-identifier'],
+              type: 'ms-events'
+            }
+          });
+        }
       } else {
         return res.status(200).send({ data: null });
       }
