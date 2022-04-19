@@ -43,7 +43,7 @@ app.get('/calendar-events/:id/ms-event', async function(req, res, next) {
     const eventId = req.params.id;
     const event = await getCalendarEvent(eventId);
 
-    if (event) {
+    if (event && event['ms-identifier']) {
       const graphApi = new GraphApiClient(sessionUri);
       const msCalendarId = calendarManager.getMsCalendarId(event.calendar);
       const msEvent = await graphApi.getCalendarEvent(msCalendarId, event);
@@ -70,8 +70,13 @@ app.get('/calendar-events/:id/ms-event', async function(req, res, next) {
         return res.status(200).send({ data: null });
       }
     } else {
-      console.log(`No calendar-event found with id ${eventId} in triplestore`);
-      return res.status(404).send();
+      if (!event) {
+        console.log(`No calendar-event found with id ${eventId} in triplestore`);
+        return res.status(404).send();
+      } else {
+        console.log(`Event with id ${eventId}, but without MS-event found in triplestore. Probably an Access-mastered event.`);
+        return res.status(200).send({ data: null });
+      }
     }
   } catch(e) {
     console.trace(e);
@@ -88,7 +93,7 @@ app.patch('/calendar-events/:id', async function(req, res, next) {
     const eventId = req.params.id;
     const event = await getCalendarEvent(eventId);
 
-    if (event) {
+    if (event && event['ms-identifier']) {
       const graphApi = new GraphApiClient(sessionUri);
       const payload = req.body.data.attributes;
       payload.id = eventId;
@@ -109,8 +114,13 @@ app.patch('/calendar-events/:id', async function(req, res, next) {
         }
       });
     } else {
-      console.log(`No calendar-event found with id ${eventId} in triplestore`);
-      return res.status(404).send();
+      if (!event) {
+        console.log(`No calendar-event found with id ${eventId} in triplestore`);
+        return res.status(404).send();
+      } else { // event without ms-identifier found in triplestore
+        console.log(`Cannot update Access-mastered event.`);
+        return res.status(409).send();
+      }
     }
   } catch(e) {
     console.trace(e);
@@ -130,9 +140,11 @@ app.delete('/calendar-events/:id', async function(req, res, next) {
       // delete in triplestore first such that delta's can already
       // be processed by other service (e.g. mu-cl-resources)
       await deleteCalendarEvent(event.uri);
-      const graphApi = new GraphApiClient(sessionUri);
-      const msCalendarId = calendarManager.getMsCalendarId(event.calendar);
-      await graphApi.deleteCalendarEvent(msCalendarId, event['ms-identifier']);
+      if (event['ms-identifier']) {
+        const graphApi = new GraphApiClient(sessionUri);
+        const msCalendarId = calendarManager.getMsCalendarId(event.calendar);
+        await graphApi.deleteCalendarEvent(msCalendarId, event['ms-identifier']);
+      }
     }
     return res.status(204).send();
   } catch(e) {

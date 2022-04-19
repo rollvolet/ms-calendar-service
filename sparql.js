@@ -68,31 +68,32 @@ async function getCalendarEvent(eventId) {
     WHERE {
       ?event a ncal:Event ;
         mu:uuid ${sparqlEscapeString(eventId)} ;
-        ncal:date ?date ;
-        ncal:uid ?identifier .
+        ncal:date ?date .
+      OPTIONAL { ?event ncal:uid ?identifier . }
       ?calendar ncal:component ?event .
     } LIMIT 1
   `);
 
   if (result.results.bindings.length) {
     const b = result.results.bindings[0];
-    return {
+    const event = {
       id: eventId,
       uri: b['event'].value,
       date: b['date'].value,
-      'ms-identifier': b['identifier'].value,
       calendar: b['calendar'].value
     };
+    if (b['identifier']) {
+      event['ms-identifier'] = b['identifier'].value;
+    }
+    return event;
   } else {
     return null;
   }
 }
 
 async function deleteCalendarEvent(eventUri) {
-  // Force cache clearing in mu-cl-resources by deleting only one property
-  // without removing the rdf:type or mu:uuid first.
-  // That way mu-cl-resources generates correct clear keys for mu-cache.
-  // TODO this query can be removed once the cache clearing issue is fixed in mu-cl-resources
+  // ms-identifier is optional, because not available for Access-mastered events.
+  // Therefore we delete this property first in a separate query.
   await update(`
     PREFIX ncal: <http://www.semanticdesktop.org/ontologies/2007/04/02/ncal#>
 
