@@ -62,11 +62,9 @@ The data model is based on the data model of the [mu-file-service](https://githu
 
 | Prefix  | URI                                                       |
 |---------|-----------------------------------------------------------|
-| nfo     | http://www.semanticdesktop.org/ontologies/2007/03/22/nfo# |
+| ncal     | http://www.semanticdesktop.org/ontologies/2007/04/02/ncal# |
 | nie     | http://www.semanticdesktop.org/ontologies/2007/01/19/nie# |
 | dct     | http://purl.org/dc/terms/                                 |
-| dbpedia | http://dbpedia.org/ontology/                              |
-| dossier | https://data.vlaanderen.be/ns/dossier#                    |
 
 #### Calendar
 ##### Description
