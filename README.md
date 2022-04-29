@@ -54,6 +54,7 @@ The following enviroment variables can be set on the service. All are optional.
 - **PLANNING_START_HOUR**: Default start hour (int) for newly scheduled planning events (default: 19)
 - **CUSTOMER_VISIT_CALENDAR**: URI of the visit calendar (default: `http://data.rollvolet.be/calendars/88e92b1b-c3e2-4a2e-a7a4-d34aee6c7746`)
 - **PLANNING_CALENDAR**: URI of the planning calendar (default: `http://data.rollvolet.be/calendars/0147d534-d7c2-49dc-bd8f-bb6951664017`)
+- **USE_PERSONAL_CALENDAR**: Schedule events in the user's personal calendar, useful for development/testing purposes (default: 'no')
 - **SESSIONS_GRAPH**: URI in which session information is stored (default: `http://mu.semte.ch/graphs/sessions`)
 
 ### Model

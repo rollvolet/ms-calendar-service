@@ -72,16 +72,18 @@ export default class GraphApiClient {
   }
 
   async createCalendarEvent(calendarId, event) {
-    console.log(`Creating calendar event on ${event.date} in MS calendar ${calendarId}`);
+    const basePath = calendarId ? `/users/${calendarId}` : `/me`;
+    console.log(`Creating calendar event on ${event.date} in MS calendar ${basePath}`);
     const msEvent = toMsEvent(event);
-    const path = `/users/${calendarId}/calendar/events`;
+    const path = `${basePath}/calendar/events`;
     const response = await this.client.api(path).post(msEvent);
     return response;
   }
 
   async getCalendarEvent(calendarId, event) {
-    console.log(`Fetching calendar event with id ${event['ms-identifier']} in MS calendar ${calendarId}`);
-    const path = `/users/${calendarId}/calendar/events/${event['ms-identifier']}`;
+    const basePath = calendarId ? `/users/${calendarId}` : `/me`;
+    console.log(`Fetching calendar event with id ${event['ms-identifier']} in MS calendar ${basePath}`);
+    const path = `${basePath}/calendar/events/${event['ms-identifier']}`;
     try {
       const response = await this.client.api(path).get();
       const date = response.start.dateTime.substr(0, "YYYY-MM-DD".length);
@@ -91,7 +93,7 @@ export default class GraphApiClient {
       };
     } catch (e) {
       if (e && e.statusCode == 404) {
-        console.log(`Event with id ${event['ms-identifier']} not found in MS calendar ${calendarId}.`);
+        console.log(`Event with id ${event['ms-identifier']} not found in MS calendar ${basePath}.`);
         return null;
       } else {
         throw e;
@@ -100,15 +102,16 @@ export default class GraphApiClient {
   }
 
   async updateCalendarEvent(calendarId, event, requiresReschedule) {
-    console.log(`Updating calendar event with id ${event['ms-identifier']} in MS calendar ${calendarId}`);
+    const basePath = calendarId ? `/users/${calendarId}` : `/me`;
+    console.log(`Updating calendar event with id ${event['ms-identifier']} in MS calendar ${basePath}`);
     const msEvent = toMsEvent(event, requiresReschedule);
-    const path = `/users/${calendarId}/calendar/events/${event['ms-identifier']}`;
+    const path = `${basePath}/calendar/events/${event['ms-identifier']}`;
     try {
       const response = await this.client.api(path).update(msEvent);
       return response;
     } catch (e) {
       if (e && e.statusCode == 404) {
-        console.log(`Event with id ${event['ms-identifier']} not found in MS calendar ${calendarId}. Going to create a new calendar event.`);
+        console.log(`Event with id ${event['ms-identifier']} not found in MS calendar ${basePath}. Going to create a new calendar event.`);
         const newEvent = await this.createCalendarEvent(calendarId, event);
         return newEvent;
       } else {
@@ -118,14 +121,15 @@ export default class GraphApiClient {
   }
 
   async deleteCalendarEvent(calendarId, msId) {
-    console.log(`Deleting calendar event with id ${msId} from MS calendar ${calendarId}`);
+    const basePath = calendarId ? `/users/${calendarId}` : `/me`;
+    console.log(`Deleting calendar event with id ${msId} from MS calendar ${basePath}`);
     try {
-      await this.client.api(`/users/${calendarId}/calendar/events/${msId}`).delete();
+      await this.client.api(`${basePath}/calendar/events/${msId}`).delete();
     } catch (e) {
       if (e && e.statusCode == 404) {
         console.log(`Event with id ${msId} not found in MS calendar ${calendarId}. Nothing to delete via Graph API.`);
       } else {
-        console.log(`Something went wrong while deleting calendar event with id ${msId} from MS calendar ${calendarId}. Event may need to be deleted manually in the calendar.`);
+        console.log(`Something went wrong while deleting calendar event with id ${msId} from MS calendar ${basePath}. Event may need to be deleted manually in the calendar.`);
       }
     }
   }
