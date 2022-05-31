@@ -6,6 +6,14 @@ import CalendarManager from './calendar-manager';
 
 const calendarManager = new CalendarManager();
 
+function setLocationString(attrs) {
+  attrs.location = [attrs.street,
+                    `${attrs.postalCode || ''} ${attrs.city || ''}`,
+                    attrs.country]
+    .filter((line) => line && line.trim().length)
+    .join(', ');
+}
+
 app.post('/calendar-events/', async function(req, res, next) {
   const sessionUri = getSessionIdHeader(req);
   if (!sessionUri)
@@ -14,6 +22,7 @@ app.post('/calendar-events/', async function(req, res, next) {
   try {
     const graphApi = new GraphApiClient(sessionUri);
     const payload = req.body.data.attributes;
+    setLocationString(payload);
     const calendarUri = await calendarManager.determineCalendar(payload);
     const msCalendarId = calendarManager.getMsCalendarId(calendarUri);
     const msEvent = await graphApi.createCalendarEvent(msCalendarId, payload);
@@ -98,6 +107,7 @@ app.patch('/calendar-events/:id', async function(req, res, next) {
       const payload = req.body.data.attributes;
       payload.id = eventId;
       payload.uri = event.uri;
+      setLocationString(payload);
       const msCalendarId = calendarManager.getMsCalendarId(event.calendar);
       const requiresReschedule = payload.date != event.date;
       const msEvent = await graphApi.updateCalendarEvent(msCalendarId, payload, requiresReschedule);

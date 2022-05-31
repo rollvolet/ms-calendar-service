@@ -27,6 +27,7 @@ function toMsEvent(event, requiresReschedule = true) {
   if (event.url) {
     htmlBody += `<p>RKB: <a href=${event.url}>${event.url}</a></p>`;
   }
+
   const msEvent = {
     subject: event.subject,
     body: {
@@ -34,7 +35,13 @@ function toMsEvent(event, requiresReschedule = true) {
       content: htmlBody
     },
     location: {
-      displayName: event.location
+      displayName: event.location,
+      address: {
+        street: event.street,
+        postalCode: event.postalCode,
+        city: event.city,
+        countryOrRegion: event.country
+      },
     },
     isReminderOn: false
   };
