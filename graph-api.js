@@ -35,7 +35,7 @@ function toMsEvent(event, requiresReschedule = true) {
       content: htmlBody
     },
     location: {
-      // displayName: event.location,
+      displayName: event.location,
       address: {
         street: event.street,
         postalCode: event['postal-code'],
