@@ -8,7 +8,7 @@ const calendarManager = new CalendarManager();
 
 function setLocationString(attrs) {
   attrs.location = [attrs.street,
-                    `${attrs.postalCode || ''} ${attrs.city || ''}`,
+                    `${attrs['postal-code'] || ''} ${attrs.city || ''}`,
                     attrs.country]
     .filter((line) => line && line.trim().length)
     .join(', ');
