@@ -1,6 +1,6 @@
 import { app, errorHandler } from 'mu';
 import { getSessionIdHeader, error } from './utils';
-import { insertCalendarEvent, updateCalendarEvent, getCalendarEvent, deleteCalendarEvent } from './sparql';
+import { insertCalendarEvent, updateCalendarEvent, getCalendarEvent, deleteCalendarEvent, getUser } from './sparql';
 import GraphApiClient from './graph-api';
 import CalendarManager from './calendar-manager';
 
@@ -26,7 +26,8 @@ app.post('/calendar-events/', async function(req, res, next) {
     const msCalendarId = calendarManager.getMsCalendarId(calendarUri);
     const msEvent = await graphApi.createCalendarEvent(msCalendarId, payload);
     payload['ms-identifier'] = msEvent.id;
-    const attributes = await insertCalendarEvent(calendarUri, payload);
+    const user = await getUser(sessionUri);
+    const attributes = await insertCalendarEvent(calendarUri, payload, user);
     const eventId = attributes.id;
     delete attributes.id;
     return res.status(201).send({
@@ -113,7 +114,8 @@ app.patch('/calendar-events/:id', async function(req, res, next) {
       // ms-identifier might have changed if a new event is created via the Graph API
       // e.g. if the previous event has been manually deleted in the agenda
       payload['ms-identifier'] = msEvent.id;
-      const attributes = await updateCalendarEvent(payload);
+      const user = await getUser(sessionUri);
+      const attributes = await updateCalendarEvent(payload, user);
       delete attributes.id;
       return res.status(200).send({
         data: {
