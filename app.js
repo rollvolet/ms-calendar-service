@@ -115,7 +115,7 @@ app.patch('/calendar-events/:id', async function(req, res, next) {
       // e.g. if the previous event has been manually deleted in the agenda
       payload['ms-identifier'] = msEvent.id;
       const user = await getUser(sessionUri);
-      const attributes = await updateCalendarEvent(payload, user);
+      const attributes = await updateCalendarEvent(event.calendar, payload, user);
       delete attributes.id;
       return res.status(200).send({
         data: {

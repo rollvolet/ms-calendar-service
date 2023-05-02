@@ -26,12 +26,18 @@ async function insertCalendarEvent(calendarUri, payload, user) {
   return event;
 }
 
-async function updateCalendarEvent(event, user) {
+async function updateCalendarEvent(calendarUri, event, user) {
   event.editor = user;
   event.modified = new Date();
 
   await update(`DELETE WHERE { ${sparqlEscapeUri(event.uri)} ?p ?o . }`);
   await _insertCalendarEvent(event);
+  await update(`
+    PREFIX ncal: <http://www.semanticdesktop.org/ontologies/2007/04/02/ncal#>
+    INSERT DATA {
+      ${sparqlEscapeUri(calendarUri)} ncal:component ${sparqlEscapeUri(event.uri)} .
+    }
+  `);
 
   return event;
 }
