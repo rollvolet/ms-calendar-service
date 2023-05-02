@@ -89,7 +89,7 @@ async function getCalendarEvent(eventId) {
     PREFIX dct: <http://purl.org/dc/terms/>
     PREFIX schema: <http://schema.org/>
 
-    SELECT ?event ?date ?created ?modified ?identifier ?creator ?editor ?calendar
+    SELECT ?event ?date ?created ?modified ?identifier ?creator ?editor ?relatedResource ?calendar
     WHERE {
       ?event a ncal:Event ;
         mu:uuid ${sparqlEscapeString(eventId)} ;
@@ -99,7 +99,8 @@ async function getCalendarEvent(eventId) {
       OPTIONAL { ?event ncal:uid ?identifier . }
       OPTIONAL { ?event dct:creator ?creator . }
       OPTIONAL { ?event schema:editor ?editor . }
-      ?calendar ncal:component ?event .
+      OPTIONAL { ?event dct:subject ?relatedResource . }
+      OPTIONAL { ?calendar ncal:component ?event . }
     } LIMIT 1
   `);
 
@@ -109,12 +110,16 @@ async function getCalendarEvent(eventId) {
       id: eventId,
       uri: b['event'].value,
       date: b['date'].value,
-      calendar: b['calendar'].value,
+      calendar: b['calendar']?.value,
       created: b['created'].value,
       modified: b['modified'].value,
       'ms-identifier': b['identifier']?.value,
       creator: b['creator']?.value,
       editor: b['editor']?.value,
+      // TODO Fix dct:subject triple once request/intervention/order are resources in triplestore
+      request: b['relatedResource']?.value,
+      intervention: b['relatedResource']?.value,
+      order: b['relatedResource']?.value,
     };
     return event;
   } else {
