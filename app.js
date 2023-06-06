@@ -54,7 +54,7 @@ app.get('/calendar-events/:id/ms-event', async function(req, res, next) {
 
     if (event && event['calendar'] && event['ms-identifier']) {
       const graphApi = new GraphApiClient(sessionUri);
-      const msCalendarId = calendarManager.getMsCalendarId(event.calendar);
+      const msCalendarId = calendarManager.getMsCalendarId(event['calendar']);
       const msEvent = await graphApi.getCalendarEvent(msCalendarId, event);
       if (msEvent) {
         if (event.date != msEvent.date) { // both in format YYYY-MM-DD
@@ -105,17 +105,18 @@ app.patch('/calendar-events/:id', async function(req, res, next) {
     const eventId = req.params.id;
     const event = await getCalendarEvent(eventId);
 
-    if (!event['calendar']) {
-      event['calendar'] = await calendarManager.determineCalendar(event);
-    }
+    if (event && event['ms-identifier']) {
+      if (!event['calendar']) {
+        console.log(`Event with id ${eventId} is not linked to an agenda in the triplestore. Determining calendar based on linked resource.`);
+        event['calendar'] = await calendarManager.determineCalendar(event);
+      }
 
-    if (event && event['calendar'] && event['ms-identifier']) {
       const graphApi = new GraphApiClient(sessionUri);
       const payload = req.body.data.attributes;
       payload.id = eventId;
       payload.uri = event.uri;
       setLocationString(payload);
-      const msCalendarId = calendarManager.getMsCalendarId(event.calendar);
+      const msCalendarId = calendarManager.getMsCalendarId(event['calendar']);
       const requiresReschedule = payload.date != event.date;
       const msEvent = await graphApi.updateCalendarEvent(msCalendarId, payload, requiresReschedule);
       // ms-identifier might have changed if a new event is created via the Graph API
@@ -135,9 +136,6 @@ app.patch('/calendar-events/:id', async function(req, res, next) {
       if (!event) {
         console.log(`No calendar-event found with id ${eventId} in triplestore`);
         return res.status(404).send();
-      } else if (!event['calendar']) {
-        console.log(`Event with id ${eventId} is not linked to an agenda in the triplestore.`);
-        return res.status(424).send();
       } else { // event without ms-identifier found in triplestore
         console.log(`Cannot update Access-mastered event.`);
         return res.status(409).send();
