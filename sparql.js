@@ -93,9 +93,9 @@ async function getCalendarEvent(eventId) {
     WHERE {
       ?event a ncal:Event ;
         mu:uuid ${sparqlEscapeString(eventId)} ;
-        ncal:date ?date ;
-        dct:created ?created ;
-        dct:modified ?modified .
+        ncal:date ?date .
+      OPTIONAL { ?event dct:created ?created . }
+      OPTIONAL { ?event dct:modified ?modified . }
       OPTIONAL { ?event ncal:uid ?identifier . }
       OPTIONAL { ?event dct:creator ?creator . }
       OPTIONAL { ?event schema:editor ?editor . }
@@ -111,8 +111,8 @@ async function getCalendarEvent(eventId) {
       uri: b['event'].value,
       date: b['date'].value,
       calendar: b['calendar']?.value,
-      created: b['created'].value,
-      modified: b['modified'].value,
+      created: b['created']?.value,
+      modified: b['modified']?.value,
       'ms-identifier': b['identifier']?.value,
       creator: b['creator']?.value,
       editor: b['editor']?.value,
