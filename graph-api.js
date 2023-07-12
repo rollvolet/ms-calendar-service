@@ -47,10 +47,8 @@ function toMsEvent(event, requiresReschedule = true) {
   };
 
   if (requiresReschedule) {
-    // TODO Type must be determined based on SPARQL query
     let hour;
-    const subject = event.request || event.intervention || event.order;
-    if (subject.startsWith('http://data.rollvolet.be/requests/')) {
+    if (event.resource.type == 'http://data.rollvolet.be/vocabularies/crm/Request') {
       hour = CUSTOMER_VISIT_START_HOUR;
     } else {
       hour = PLANNING_START_HOUR;
@@ -78,10 +76,10 @@ export default class GraphApiClient {
     });
   }
 
-  async createCalendarEvent(calendarId, event) {
+  async createCalendarEvent(calendarId, event, resource) {
     const basePath = calendarId ? `/users/${calendarId}` : `/me`;
     console.log(`Creating calendar event on ${event.date} in MS calendar ${basePath}`);
-    const msEvent = toMsEvent(event);
+    const msEvent = toMsEvent(Object.assign({}, event, { resource }));
     const path = `${basePath}/calendar/events`;
     const response = await this.client.api(path).post(msEvent);
     return response;
@@ -108,10 +106,10 @@ export default class GraphApiClient {
     }
   }
 
-  async updateCalendarEvent(calendarId, event, requiresReschedule) {
+  async updateCalendarEvent(calendarId, event, resource, requiresReschedule) {
     const basePath = calendarId ? `/users/${calendarId}` : `/me`;
     console.log(`Updating calendar event with id ${event['ms-identifier']} in MS calendar ${basePath}`);
-    const msEvent = toMsEvent(event, requiresReschedule);
+    const msEvent = toMsEvent(Object.assign({}, event, { resource }), requiresReschedule);
     const path = `${basePath}/calendar/events/${event['ms-identifier']}`;
     try {
       const response = await this.client.api(path).update(msEvent);
@@ -119,7 +117,7 @@ export default class GraphApiClient {
     } catch (e) {
       if (e && e.statusCode == 404) {
         console.log(`Event with id ${event['ms-identifier']} not found in MS calendar ${basePath}. Going to create a new calendar event.`);
-        const newEvent = await this.createCalendarEvent(calendarId, event);
+        const newEvent = await this.createCalendarEvent(calendarId, event, resource);
         return newEvent;
       } else {
         throw e;

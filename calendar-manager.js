@@ -1,3 +1,4 @@
+import { sparqlEscapeString } from 'mu';
 import { querySudo } from '@lblod/mu-auth-sudo';
 
 function isTruthy(value) {
@@ -32,16 +33,41 @@ export default class CalendarManager {
     }
   }
 
-  determineCalendar(event) {
-    // TODO Convert to a SPARQL query to determine rdf:Class of the related resource once
-    // request/intervention/order are available as resources in triplestore.
-    // Currently request, intervention and order attribute all contain the same URI value.
-    // We're going to make a distinction based on the base URI.
-    const subject = event.request || event.intervention || event.order;
-    if (subject.startsWith('http://data.rollvolet.be/requests/')) {
-      return CUSTOMER_VISIT_CALENDAR;
+  async determineCalendar(resourceId) {
+    const result = await querySudo(`
+    PREFIX mu: <http://mu.semte.ch/vocabularies/core/>
+    SELECT DISTINCT ?resource ?type
+    WHERE {
+      ?resource a ?type ; mu:uuid ${sparqlEscapeString(resourceId)} .
+    } LIMIT 1
+  `);
+
+    if (result.results.bindings.length) {
+      const type = result.results.bindings[0]['type'].value;
+      const resource = result.results.bindings[0]['resource'].value;
+      if (type == 'http://data.rollvolet.be/vocabularies/crm/Request') {
+        return {
+          resource: {
+            uri: resource,
+            type
+          },
+          calendar: {
+            uri: CUSTOMER_VISIT_CALENDAR
+          }
+        };
+      } else {
+        return {
+          resource: {
+            uri: resource,
+            type
+          },
+          calendar: {
+            uri: PLANNING_CALENDAR
+          }
+        };
+      }
     } else {
-      return PLANNING_CALENDAR;
+      return null;
     }
   }
 

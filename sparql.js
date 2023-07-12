@@ -3,7 +3,7 @@ import { query, update, uuid,
 
 const BASE_URI = 'http://data.rollvolet.be';
 
-async function insertCalendarEvent(calendarUri, payload, user) {
+async function insertCalendarEvent(calendarUri, payload, resourceUri, user) {
   const eventId = uuid();
   const eventUri = `${BASE_URI}/calendar-events/${eventId}`;
   const now = new Date();
@@ -13,7 +13,8 @@ async function insertCalendarEvent(calendarUri, payload, user) {
     creator: user,
     editor: user,
     created: now,
-    modified: now
+    modified: now,
+    resource: resourceUri,
   });
   await _insertCalendarEvent(event);
   await update(`
@@ -26,9 +27,10 @@ async function insertCalendarEvent(calendarUri, payload, user) {
   return event;
 }
 
-async function updateCalendarEvent(calendarUri, event, user) {
+async function updateCalendarEvent(calendarUri, event, resourceUri, user) {
   event.editor = user;
   event.modified = new Date();
+  event.resource = resourceUri;
 
   await update(`DELETE WHERE { ${sparqlEscapeUri(event.uri)} ?p ?o . }`);
   await _insertCalendarEvent(event);
@@ -57,9 +59,6 @@ async function _insertCalendarEvent(event) {
     optionalProperties.push(` schema:editor ${sparqlEscapeUri(event.editor)} ;`);
   }
 
-  // TODO Fix dct:subject triple once request/intervention/order are resources in triplestore
-  const linkedResource = event.request || event.intervention || event.order;
-
   await update(`
     PREFIX mu: <http://mu.semte.ch/vocabularies/core/>
     PREFIX ncal: <http://www.semanticdesktop.org/ontologies/2007/04/02/ncal#>
@@ -74,8 +73,8 @@ async function _insertCalendarEvent(event) {
         ncal:summary ${sparqlEscapeString(event.subject)} ;
         ncal:url ${sparqlEscapeUri(event.url)} ;
         ${optionalProperties.join('\n')}
-        dct:source 'RKB' ;
-        dct:subject ${sparqlEscapeUri(linkedResource)} ;
+        dct:source "RKB" ;
+        dct:subject ${sparqlEscapeUri(event.resource)} ;
         dct:created ${sparqlEscapeDateTime(event.created)} ;
         dct:modified ${sparqlEscapeDateTime(event.modified)} .
     }
@@ -89,7 +88,7 @@ async function getCalendarEvent(eventId) {
     PREFIX dct: <http://purl.org/dc/terms/>
     PREFIX schema: <http://schema.org/>
 
-    SELECT ?event ?date ?created ?modified ?identifier ?creator ?editor ?relatedResource ?calendar
+    SELECT ?event ?date ?created ?modified ?identifier ?creator ?editor ?relatedResource ?type ?calendar
     WHERE {
       ?event a ncal:Event ;
         mu:uuid ${sparqlEscapeString(eventId)} ;
@@ -99,7 +98,10 @@ async function getCalendarEvent(eventId) {
       OPTIONAL { ?event ncal:uid ?identifier . }
       OPTIONAL { ?event dct:creator ?creator . }
       OPTIONAL { ?event schema:editor ?editor . }
-      OPTIONAL { ?event dct:subject ?relatedResource . }
+      OPTIONAL {
+        ?event dct:subject ?relatedResource .
+        ?relatedResource a ?type .
+      }
       OPTIONAL { ?calendar ncal:component ?event . }
     } LIMIT 1
   `);
@@ -116,10 +118,10 @@ async function getCalendarEvent(eventId) {
       'ms-identifier': b['identifier']?.value,
       creator: b['creator']?.value,
       editor: b['editor']?.value,
-      // TODO Fix dct:subject triple once request/intervention/order are resources in triplestore
-      request: b['relatedResource']?.value,
-      intervention: b['relatedResource']?.value,
-      order: b['relatedResource']?.value,
+      resource: {
+        uri: b['relatedResource']?.value,
+        type: b['type']?.value,
+      },
     };
     return event;
   } else {

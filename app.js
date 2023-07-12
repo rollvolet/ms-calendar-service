@@ -21,13 +21,15 @@ app.post('/calendar-events/', async function(req, res, next) {
   try {
     const graphApi = new GraphApiClient(sessionUri);
     const payload = req.body.data.attributes;
+    const { request, intervention, order } = req.body.data.relationships;
+    const linkedResourceId = [request, intervention, order].find((r) => r).data.id;
     setLocationString(payload);
-    const calendarUri = await calendarManager.determineCalendar(payload);
-    const msCalendarId = calendarManager.getMsCalendarId(calendarUri);
-    const msEvent = await graphApi.createCalendarEvent(msCalendarId, payload);
+    const { resource, calendar } = await calendarManager.determineCalendar(linkedResourceId);
+    const msCalendarId = calendarManager.getMsCalendarId(calendar.uri);
+    const msEvent = await graphApi.createCalendarEvent(msCalendarId, payload, resource);
     payload['ms-identifier'] = msEvent.id;
     const user = await getUser(sessionUri);
-    const attributes = await insertCalendarEvent(calendarUri, payload, user);
+    const attributes = await insertCalendarEvent(calendar.uri, payload, resource.uri, user);
     const eventId = attributes.id;
     delete attributes.id;
     return res.status(201).send({
@@ -106,11 +108,6 @@ app.patch('/calendar-events/:id', async function(req, res, next) {
     const event = await getCalendarEvent(eventId);
 
     if (event && event['ms-identifier']) {
-      if (!event['calendar']) {
-        console.log(`Event with id ${eventId} is not linked to an agenda in the triplestore. Determining calendar based on linked resource.`);
-        event['calendar'] = await calendarManager.determineCalendar(event);
-      }
-
       const graphApi = new GraphApiClient(sessionUri);
       const payload = req.body.data.attributes;
       payload.id = eventId;
@@ -118,12 +115,12 @@ app.patch('/calendar-events/:id', async function(req, res, next) {
       setLocationString(payload);
       const msCalendarId = calendarManager.getMsCalendarId(event['calendar']);
       const requiresReschedule = payload.date != event.date;
-      const msEvent = await graphApi.updateCalendarEvent(msCalendarId, payload, requiresReschedule);
+      const msEvent = await graphApi.updateCalendarEvent(msCalendarId, payload, event.resource, requiresReschedule);
       // ms-identifier might have changed if a new event is created via the Graph API
       // e.g. if the previous event has been manually deleted in the agenda
       payload['ms-identifier'] = msEvent.id;
       const user = await getUser(sessionUri);
-      const attributes = await updateCalendarEvent(event.calendar, payload, user);
+      const attributes = await updateCalendarEvent(event.calendar, payload, event.resource.uri, user);
       delete attributes.id;
       return res.status(200).send({
         data: {
